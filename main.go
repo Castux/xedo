@@ -8,7 +8,10 @@ import (
 func main() {
 	defer midi.CloseDriver()
 
-	pad := SetupLaunchpad()
+	synth := SetupSynth()
+	defer synth.Shutdown()
+
+	pad := SetupLaunchpad(synth)
 	defer pad.Shutdown()
 
 	pad.SetupScale(&Minor)

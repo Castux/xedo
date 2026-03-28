@@ -1,8 +1,8 @@
 package main
 
 import (
-	"math"
 	"fmt"
+	"math"
 
 	"gitlab.com/gomidi/midi/v2"
 )
@@ -20,7 +20,7 @@ func (setup *ScaleInfo) KeyToNote(key uint8) int {
 }
 
 func (scale *ScaleInfo) NoteToColor(note int) uint8 {
-	return scale.Palette[note % scale.Divisions]
+	return scale.Palette[note%scale.Divisions]
 }
 
 func (scale *ScaleInfo) NoteToFreq(note int) float64 {
@@ -57,8 +57,13 @@ func (scale *ScaleInfo) OnEvent(msg midi.Message, ts int32, pad *Launchpad) {
 		}
 	}
 
-	if down  {
-		fmt.Printf("Key: %d, note: %d, freq: %f\n", key, baseNote, scale.NoteToFreq(baseNote))
+	freq := scale.NoteToFreq(baseNote)
+	if down {
+		fmt.Printf("Key: %d, note: %d, freq: %f\n", key, baseNote, freq)
+		pad.Synth.PlayNote(freq)
+	} else {
+		fmt.Printf("Off %f\n", freq)
+		pad.Synth.StopNote(freq)
 	}
 }
 

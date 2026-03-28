@@ -17,12 +17,16 @@ type Launchpad struct {
 	OnEvent func(msg midi.Message, timestamp int32, pad *Launchpad)
 	Stop    func()
 
+	Synth *Synth
+
 	Exit bool
 }
 
-func SetupLaunchpad() *Launchpad {
+func SetupLaunchpad(synth *Synth) *Launchpad {
 	var pad Launchpad
 	var err error
+
+	pad.Synth = synth
 
 	pad.InPort, err = midi.FindInPort("Launchpad X LPX MIDI Out")
 	if err != nil {
@@ -68,7 +72,7 @@ func (pad *Launchpad) Shutdown() {
 }
 
 func (pad *Launchpad) DrawOneIndexed(row, col int, color uint8) {
-	key := row * 10 + col
+	key := row*10 + col
 	pad.Send(midi.NoteOn(0, uint8(key), color))
 }
 
@@ -122,7 +126,7 @@ func KeyToRowCol(key uint8) (int, int) {
 }
 
 func KeyFromRowCol(row, col int) uint8 {
-	return uint8(10 * row + col)
+	return uint8(10*row + col)
 }
 
 func PrintMidiEvent(msg midi.Message, timestamp int32, pad *Launchpad) {
