@@ -113,7 +113,6 @@ func SetupLaunchpad(synth *Synth) *Launchpad {
 	programmerMode := []byte{0x00, 0x20, 0x29, 0x02, 0x0C, 0x00, 0x7F}
 	pad.Send(midi.SysEx(programmerMode))
 
-	pad.ScaleIndex = 2
 	pad.SetupScale()
 
 	return &pad
