@@ -1,7 +1,6 @@
 package main
 
 import (
-
 	"gitlab.com/gomidi/midi/v2"
 	_ "gitlab.com/gomidi/midi/v2/drivers/rtmididrv" // autoregisters driver
 
@@ -24,7 +23,6 @@ func main() {
 		_, err := fmt.Scanln(&divisions)
 		if err == nil {
 			pad.SetupScale(divisions)
-			fmt.Println(pad.Scale.RightStep)
 		} else {
 			fmt.Println(err)
 		}

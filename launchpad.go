@@ -23,7 +23,7 @@ type Launchpad struct {
 
 	Synth      *Synth
 	ScaleIndex int
-	Scale *ScaleInfo
+	Scale      *ScaleInfo
 
 	Exit bool
 }
@@ -87,9 +87,9 @@ func SetupLaunchpad(synth *Synth) *Launchpad {
 					pad.Synth.Shape %= NumShapes
 					fmt.Println("Synth switched to", ShapeNames[pad.Synth.Shape])
 				case 89:
-					pad.SetupScale(pad.Scale.Divisions+1)
+					pad.SetupScale(pad.Scale.Divisions + 1)
 				case 79:
-					pad.SetupScale(pad.Scale.Divisions-1)
+					pad.SetupScale(pad.Scale.Divisions - 1)
 				}
 			}
 			return
