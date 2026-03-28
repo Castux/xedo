@@ -87,11 +87,13 @@ func SetupLaunchpad(synth *Synth) *Launchpad {
 					fmt.Println("Scale switched to", Scales[pad.ScaleIndex].Name)
 				}
 				pad.SetupScale()
+
 			}
+			return
 		default:
 			return
 		}
-		row, col := pad.KeyToRowCol(key)
+		row, col := pad.KeyToRowCol(int(key))
 
 		ev := Event{
 			Row:      row,
@@ -108,23 +110,31 @@ func SetupLaunchpad(synth *Synth) *Launchpad {
 		panic(err)
 	}
 
-	pad.ScaleIndex = 2
-	pad.SetupScale()
-
 	programmerMode := []byte{0x00, 0x20, 0x29, 0x02, 0x0C, 0x00, 0x7F}
 	pad.Send(midi.SysEx(programmerMode))
+
+	pad.ScaleIndex = 2
+	pad.SetupScale()
 
 	return &pad
 }
 
-func (pad *Launchpad) KeyToRowCol(key uint8) (int, int) {
-	return int(key/10) + pad.RowOffset, int(key%10) + pad.ColOffset
+func (pad *Launchpad) KeyToRowCol(key int) (int, int) {
+	return key/10 + pad.RowOffset, key%10 + pad.ColOffset
 }
 
-func (pad *Launchpad) KeyFromRowCol(row, col int) uint8 {
+func (pad *Launchpad) KeyFromRowCol(row, col int) int {
 	row -= pad.RowOffset
 	col -= pad.ColOffset
-	return uint8(10*row + col)
+	return 10*row + col
+}
+
+func (pad *Launchpad) ForEachPhysicalKey(cb func(row, col int)) {
+	for row := range 8 {
+		for col := range 8 {
+			cb(row+1+pad.RowOffset, col+1+pad.ColOffset)
+		}
+	}
 }
 
 func (pad *Launchpad) Shutdown() {
@@ -147,12 +157,15 @@ func (pad *Launchpad) DrawOneIndexed(row, col int, color uint8) {
 
 func (pad *Launchpad) DrawOne(row, col int, color color.Color) {
 	key := pad.KeyFromRowCol(row, col)
+	if key < 0 || key > 0xff {
+		fmt.Println("Bad key", key)
+	}
 
 	bytes := []byte{0x00, 0x20, 0x29, 0x02, 0x0C, 0x03}
 	r, g, b, _ := color.RGBA()
 	bytes = append(bytes,
 		3,          // RGB mode
-		key,        // key
+		uint8(key), // key
 		byte(r>>9), // Go from 0xFFFF to 0x7F
 		byte(g>>9),
 		byte(b>>9),

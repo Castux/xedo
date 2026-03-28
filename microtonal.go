@@ -37,14 +37,12 @@ func (scale *ScaleInfo) OnEvent(ev Event, pad *Launchpad) {
 		color = Red
 	}
 
-	for row := 1; row <= 8; row++ {
-		for col := 1; col <= 8; col++ {
-			note := scale.RowColToNote(row, col)
-			if note == baseNote {
-				pad.DrawOneIndexed(row, col, color)
-			}
+	pad.ForEachPhysicalKey(func(row, col int) {
+		note := scale.RowColToNote(row, col)
+		if note == baseNote {
+			pad.DrawOneIndexed(row, col, color)
 		}
-	}
+	})
 
 	freq := scale.NoteToFreq(baseNote)
 	if ev.Down {
@@ -58,12 +56,8 @@ func (pad *Launchpad) SetupScale() {
 	scale := Scales[pad.ScaleIndex]
 	pad.OnEvent = scale.OnEvent
 
-	for key := uint8(11); key <= 88; key++ {
-		if key%10 > 8 {
-			continue
-		}
-		row, col := pad.KeyToRowCol(key)
+	pad.ForEachPhysicalKey(func(row, col int) {
 		note := scale.RowColToNote(row, col)
 		pad.DrawOneIndexed(row, col, scale.NoteToColor(note))
-	}
+	})
 }
