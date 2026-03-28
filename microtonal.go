@@ -16,6 +16,10 @@ func (setup *ScaleInfo) RowColToNote(row, col int) int {
 }
 
 func (scale *ScaleInfo) NoteToColor(note int) uint8 {
+	note %= scale.Divisions
+	if note < 0 {
+		note += scale.Divisions
+	}
 	return scale.Palette[note%scale.Divisions]
 }
 
@@ -50,12 +54,15 @@ func (scale *ScaleInfo) OnEvent(ev Event, pad *Launchpad) {
 }
 
 func (pad *Launchpad) SetupScale(scale *ScaleInfo) {
+	pad.Scale = scale
 	pad.OnEvent = scale.OnEvent
 
-	for row := 8; row >= 1; row-- {
-		for col := 1; col <= 8; col++ {
-			note := scale.RowColToNote(row, col)
-			pad.DrawOneIndexed(row, col, scale.NoteToColor(note))
+	for key := uint8(11); key <= 88; key++ {
+		if key%10 > 8 {
+			continue
 		}
+		row, col := pad.KeyToRowCol(key)
+		note := scale.RowColToNote(row, col)
+		pad.DrawOneIndexed(row, col, scale.NoteToColor(note))
 	}
 }

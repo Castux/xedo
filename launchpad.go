@@ -16,14 +16,18 @@ type Launchpad struct {
 	OnEvent func(ev Event, pad *Launchpad)
 	Stop    func()
 
+	RowOffset int
+	ColOffset int
+
 	Synth *Synth
+	Scale *ScaleInfo
 
 	Exit bool
 }
 
 type Event struct {
 	Row, Col int
-	Down bool
+	Down     bool
 	Velocity float64
 }
 
@@ -58,15 +62,31 @@ func SetupLaunchpad(synth *Synth) *Launchpad {
 			down = true
 		case msg.GetNoteEnd(&ch, &key):
 			down = false
+		case msg.GetControlChange(&ch, &key, &vel):
+			if vel > 0 {
+				switch key {
+				case 91:
+					pad.RowOffset++
+				case 92:
+					pad.RowOffset--
+				case 93:
+					pad.ColOffset--
+				case 94:
+					pad.ColOffset++
+				case 98:
+					pad.Exit = true
+				}
+				pad.SetupScale(pad.Scale)
+			}
 		default:
 			return
 		}
 		row, col := pad.KeyToRowCol(key)
 
 		ev := Event{
-			Row: row,
-			Col: col,
-			Down: down,
+			Row:      row,
+			Col:      col,
+			Down:     down,
 			Velocity: float64(vel) / float64(0xff),
 		}
 
@@ -85,10 +105,12 @@ func SetupLaunchpad(synth *Synth) *Launchpad {
 }
 
 func (pad *Launchpad) KeyToRowCol(key uint8) (int, int) {
-	return int(key / 10), int(key % 10)
+	return int(key/10) + pad.RowOffset, int(key%10) + pad.ColOffset
 }
 
 func (pad *Launchpad) KeyFromRowCol(row, col int) uint8 {
+	row -= pad.RowOffset
+	col -= pad.ColOffset
 	return uint8(10*row + col)
 }
 
@@ -106,22 +128,19 @@ func (pad *Launchpad) Shutdown() {
 }
 
 func (pad *Launchpad) DrawOneIndexed(row, col int, color uint8) {
-	key := row*10 + col
+	key := pad.KeyFromRowCol(row, col)
 	pad.Send(midi.NoteOn(0, uint8(key), color))
 }
 
 func (pad *Launchpad) DrawOne(row, col int, color color.Color) {
-
-	if row < 1 || row > 8 || col < 1 || col > 8 {
-		return
-	}
+	key := pad.KeyFromRowCol(row, col)
 
 	bytes := []byte{0x00, 0x20, 0x29, 0x02, 0x0C, 0x03}
 	r, g, b, _ := color.RGBA()
 	bytes = append(bytes,
-		3,                // RGB mode
-		byte(row*10+col), // key
-		byte(r>>9),       // Go from 0xFFFF to 0x7F
+		3,          // RGB mode
+		key,        // key
+		byte(r>>9), // Go from 0xFFFF to 0x7F
 		byte(g>>9),
 		byte(b>>9),
 	)

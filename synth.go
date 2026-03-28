@@ -83,7 +83,7 @@ func (synth *Synth) PlayNote(freq float64, volume float64) {
 		Ticks:      0,
 		KeyOffTime: math.MaxInt,
 
-		Attack: 0.1,
+		Attack: 0.05,
 		Decay:  0.2,
 	}
 
