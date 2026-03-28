@@ -14,6 +14,16 @@ type Voice struct {
 	KeyOffTime int
 }
 
+func (voice *Voice) GenerateSample(sampleRate float64) (float32, float32) {
+	voice.Ticks++
+
+	t := float64(voice.Ticks) / sampleRate
+	phase := 2 * math.Pi * voice.Freq * t
+
+	sample := float32(math.Sin(phase))
+	return sample, sample
+}
+
 type Synth struct {
 	Stream     *portaudio.Stream
 	SampleRate float64
@@ -54,7 +64,12 @@ func (synth *Synth) PlayNote(freq float64) {
 		return
 	}
 
-	synth.NotesPlaying[freq] = &Voice{}
+	synth.NotesPlaying[freq] = &Voice{
+		Freq: freq,
+		Volume: 1.0,
+		Ticks: 0,
+		KeyOffTime: 0,
+	}
 }
 
 func (synth *Synth) StopNote(freq float64) {
@@ -75,15 +90,11 @@ func (synth *Synth) GenerateAudio(out [][]float32) {
 		out[1][i] = 0.0
 	}
 
-	for freq, voice := range synth.NotesPlaying {
+	for _, voice := range synth.NotesPlaying {
 		for i := range numSamples {
-			t := float64(voice.Ticks) / synth.SampleRate
-			phase := 2 * math.Pi * freq * t
-
-			out[0][i] += float32(math.Sin(phase))
-			out[1][i] += float32(math.Sin(phase))
-
-			voice.Ticks++
+			left, right := voice.GenerateSample(synth.SampleRate)
+			out[0][i] += left
+			out[1][i] += right
 		}
 	}
 
