@@ -23,6 +23,7 @@ type Launchpad struct {
 
 	Synth      *Synth
 	ScaleIndex int
+	Scale *ScaleInfo
 
 	Exit bool
 }
@@ -69,12 +70,16 @@ func SetupLaunchpad(synth *Synth) *Launchpad {
 				switch key {
 				case 91:
 					pad.RowOffset++
+					pad.RedrawAllNotes()
 				case 92:
 					pad.RowOffset--
+					pad.RedrawAllNotes()
 				case 93:
 					pad.ColOffset--
+					pad.RedrawAllNotes()
 				case 94:
 					pad.ColOffset++
+					pad.RedrawAllNotes()
 				case 98:
 					pad.Exit = true
 				case 19:
@@ -82,12 +87,8 @@ func SetupLaunchpad(synth *Synth) *Launchpad {
 					pad.Synth.Shape %= NumShapes
 					fmt.Println("Synth switched to", ShapeNames[pad.Synth.Shape])
 				case 29:
-					pad.ScaleIndex++
-					pad.ScaleIndex %= len(Scales)
-					fmt.Println("Scale switched to", Scales[pad.ScaleIndex].Name)
+					pad.SetupScale(pad.Scale.Divisions+1)
 				}
-				pad.SetupScale()
-
 			}
 			return
 		default:
@@ -113,7 +114,7 @@ func SetupLaunchpad(synth *Synth) *Launchpad {
 	programmerMode := []byte{0x00, 0x20, 0x29, 0x02, 0x0C, 0x00, 0x7F}
 	pad.Send(midi.SysEx(programmerMode))
 
-	pad.SetupScale()
+	pad.SetupScale(12)
 
 	return &pad
 }

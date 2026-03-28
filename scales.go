@@ -1,5 +1,8 @@
 package main
 
+import "math"
+import "fmt"
+
 const (
 	Green    uint8 = 26
 	Blue     uint8 = 37
@@ -9,6 +12,41 @@ const (
 	Yellow   uint8 = 12
 	Pink     uint8 = 4
 )
+
+var MajorSemitones = []int{0, 2, 4, 5, 7, 9, 11}
+
+func MakeScale(divisions int) *ScaleInfo {
+
+	palette := make(map[int]uint8)
+
+	for _, semi := range MajorSemitones {
+		pitch := float64(semi) / 12.0
+		closest := math.Round(pitch * float64(divisions))
+
+		palette[int(closest)] = Blue
+	}
+
+	palette[0] = DarkBlue
+	right := 1
+	switch {
+		case divisions <= 10:
+			right = 1
+		case divisions <= 15:
+			right = 2
+		case divisions <= 20:
+			right = 3
+		default:
+			right = 4
+	}
+
+	return &ScaleInfo{
+		Name: fmt.Sprintf("%dtet", divisions),
+		Divisions: divisions,
+		RightStep: right,
+		UpStep: 1,
+		Palette: palette,
+	}
+}
 
 var Scales = []*ScaleInfo{
 

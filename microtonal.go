@@ -2,6 +2,7 @@ package main
 
 import (
 	"math"
+	"fmt"
 )
 
 type ScaleInfo struct {
@@ -52,12 +53,21 @@ func (scale *ScaleInfo) OnEvent(ev Event, pad *Launchpad) {
 	}
 }
 
-func (pad *Launchpad) SetupScale() {
-	scale := Scales[pad.ScaleIndex]
-	pad.OnEvent = scale.OnEvent
-
+func (pad *Launchpad) RedrawAllNotes() {
 	pad.ForEachPhysicalKey(func(row, col int) {
-		note := scale.RowColToNote(row, col)
-		pad.DrawOneIndexed(row, col, scale.NoteToColor(note))
+		note := pad.Scale.RowColToNote(row, col)
+		pad.DrawOneIndexed(row, col, pad.Scale.NoteToColor(note))
 	})
+}
+
+func (pad *Launchpad) SetupScale(divisions int) {
+	if pad.Scale == nil || divisions != pad.Scale.Divisions {
+		scale := MakeScale(divisions)
+		pad.Scale = scale
+		pad.OnEvent = scale.OnEvent
+
+		fmt.Println("Switched to", divisions)
+	}
+
+	pad.RedrawAllNotes()
 }
