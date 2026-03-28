@@ -14,6 +14,7 @@ type Launchpad struct {
 	InPort  drivers.In
 	OutPort drivers.Out
 	Send    func(msg midi.Message) error
+	OnEvent func(msg midi.Message, timestamp int32, pad *Launchpad)
 	Stop    func()
 
 	Exit bool
@@ -38,7 +39,11 @@ func SetupLaunchpad() *Launchpad {
 		panic(err)
 	}
 
-	pad.Stop, err = midi.ListenTo(pad.InPort, pad.OnMidiEvent, midi.UseSysEx())
+	pad.Stop, err = midi.ListenTo(pad.InPort, func(msg midi.Message, timestamp int32) {
+		if pad.OnEvent != nil {
+			pad.OnEvent(msg, timestamp, &pad)
+		}
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -60,6 +65,11 @@ func (pad *Launchpad) Shutdown() {
 	pad.Send(midi.SysEx(custom4))
 
 	pad.Stop()
+}
+
+func (pad *Launchpad) DrawOneIndexed(row, col int, color uint8) {
+	key := row * 10 + col
+	pad.Send(midi.NoteOn(0, uint8(key), color))
 }
 
 func (pad *Launchpad) DrawOne(row, col int, color color.Color) {
@@ -111,21 +121,17 @@ func KeyToRowCol(key uint8) (int, int) {
 	return int(key / 10), int(key % 10)
 }
 
-func (pad *Launchpad) OnMidiEvent(msg midi.Message, timestamps int32) {
+func KeyFromRowCol(row, col int) uint8 {
+	return uint8(10 * row + col)
+}
+
+func PrintMidiEvent(msg midi.Message, timestamp int32, pad *Launchpad) {
 	var ch, key, vel, controller, value uint8
 	var absolute uint16
 
 	switch {
 	case msg.GetNoteStart(&ch, &key, &vel):
 		fmt.Printf("starting note %s (%d), on channel %v with velocity %v\n", midi.Note(key), key, ch, vel)
-
-		row, col := KeyToRowCol(key)
-		pad.DrawOne(row, col, color.RGBA{0xff, 0, 0, 0})
-		pad.DrawOne(row+1, col, color.RGBA{0xff, 0, 0, 0})
-		pad.DrawOne(row-1, col, color.RGBA{0xff, 0, 0, 0})
-		pad.DrawOne(row, col+1, color.RGBA{0xff, 0, 0, 0})
-		pad.DrawOne(row, col-1, color.RGBA{0xff, 0, 0, 0})
-
 	case msg.GetNoteEnd(&ch, &key):
 		fmt.Printf("ending note %s on channel %v\n", midi.Note(key), ch)
 	case msg.GetControlChange(&ch, &controller, &value):
@@ -144,6 +150,7 @@ func (pad *Launchpad) OnMidiEvent(msg midi.Message, timestamps int32) {
 }
 
 func (pad *Launchpad) DrawSprites() {
+	pad.OnEvent = PrintMidiEvent
 	sprites := LoadSprites()
 
 	for !pad.Exit {
