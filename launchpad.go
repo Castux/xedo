@@ -1,12 +1,14 @@
 package main
 
 import (
-	"gitlab.com/gomidi/midi/v2"
-	"gitlab.com/gomidi/midi/v2/drivers"
-	_ "gitlab.com/gomidi/midi/v2/drivers/rtmididrv" // autoregisters driver
+	"fmt"
 	"image/color"
 	"math/rand/v2"
 	"time"
+
+	"gitlab.com/gomidi/midi/v2"
+	"gitlab.com/gomidi/midi/v2/drivers"
+	_ "gitlab.com/gomidi/midi/v2/drivers/rtmididrv" // autoregisters driver
 )
 
 type Launchpad struct {
@@ -75,6 +77,10 @@ func SetupLaunchpad(synth *Synth) *Launchpad {
 					pad.ColOffset++
 				case 98:
 					pad.Exit = true
+				case 19:
+					pad.Synth.Shape++
+					pad.Synth.Shape %= NumShapes
+					fmt.Println("Switched to", ShapeNames[pad.Synth.Shape])
 				}
 				pad.SetupScale(pad.Scale)
 			}

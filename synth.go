@@ -8,12 +8,23 @@ import (
 	"github.com/gordonklaus/portaudio"
 )
 
+const (
+	Sine = iota
+	Square
+	Saw
+	Triangle
+	NumShapes
+)
+
+var ShapeNames = []string{"sine", "square", "saw", "triangle"}
+
 type Voice struct {
 	Freq       float64
 	Volume     float64
 	Ticks      int
 	KeyOffTime int
 
+	Shape  int
 	Attack float64
 	Decay  float64
 
@@ -24,7 +35,23 @@ func (voice *Voice) GenerateSample(sampleRate float64) (float32, float32) {
 	voice.Ticks++
 
 	t := float64(voice.Ticks) / sampleRate
-	phase := 2 * math.Pi * voice.Freq * t
+	period := 1.0 / voice.Freq
+
+	sample := 0.0
+
+	switch voice.Shape {
+	case Sine:
+		sample = math.Sin(2 * math.Pi * voice.Freq * t)
+	case Square:
+		sample = 1.0
+		if math.Mod(t, period) >= period/2.0 {
+			sample = -1.0
+		}
+	case Saw:
+		sample = 2.0*math.Mod(t, period)/period - 1.0
+	case Triangle:
+		sample = 2.0 * math.Abs(t/period-math.Floor(t/period+0.5))
+	}
 
 	volume := voice.Volume
 	if t <= voice.Attack {
@@ -39,13 +66,14 @@ func (voice *Voice) GenerateSample(sampleRate float64) (float32, float32) {
 		voice.Dead = true
 	}
 
-	sample := float32(math.Sin(phase) * volume)
-	return sample, sample
+	sample *= volume
+	return float32(sample), float32(sample)
 }
 
 type Synth struct {
 	Stream     *portaudio.Stream
 	SampleRate float64
+	Shape      int
 
 	Mutex        sync.Mutex
 	NotesPlaying []*Voice
@@ -59,6 +87,7 @@ func SetupSynth() *Synth {
 
 	synth := Synth{
 		SampleRate: 44100,
+		Shape:      Sine,
 	}
 
 	synth.Stream, err = portaudio.OpenDefaultStream(0, 2, synth.SampleRate, 0, synth.GenerateAudio)
@@ -83,6 +112,7 @@ func (synth *Synth) PlayNote(freq float64, volume float64) {
 		Ticks:      0,
 		KeyOffTime: math.MaxInt,
 
+		Shape:  synth.Shape,
 		Attack: 0.05,
 		Decay:  0.2,
 	}
