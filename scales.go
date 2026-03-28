@@ -13,30 +13,58 @@ const (
 	Pink     uint8 = 4
 )
 
+func SolveExactMapping(divisions int) (int, int) {
+
+	for big := 1; big <= divisions / 5; big++ {
+		for small := 1; small < big; small++ {
+			if 5 * big + 2 * small == divisions {
+				return big, small
+			}
+		}
+	}
+
+	return -1, -1
+}
+
 var MajorSemitones = []int{0, 2, 4, 5, 7, 9, 11}
 
 func MakeScale(divisions int) *ScaleInfo {
 
+	right := 1
 	palette := make(map[int]uint8)
 
-	for _, semi := range MajorSemitones {
-		pitch := float64(semi) / 12.0
-		closest := math.Round(pitch * float64(divisions))
+	big, small := SolveExactMapping(divisions)
+	if big > 0 {
+		pitch := 0
+		palette[pitch] = DarkBlue
+		pitch += big
+		palette[pitch] = Blue
+		pitch += big
+		palette[pitch] = Blue
+		pitch += small
+		palette[pitch] = Blue
+		pitch += big
+		palette[pitch] = Blue
+		pitch += big
+		palette[pitch] = Blue
+		pitch += big
+		palette[pitch] = Blue
+		pitch += small
+		palette[pitch] = Blue
 
-		palette[int(closest)] = Blue
-	}
+		right = big
+	} else {
+		for i, semi := range MajorSemitones {
+			pitch := float64(semi) / 12.0
+			closest := math.Round(pitch * float64(divisions))
 
-	palette[0] = DarkBlue
-	right := 1
-	switch {
-		case divisions <= 10:
-			right = 1
-		case divisions <= 15:
-			right = 2
-		case divisions <= 20:
-			right = 3
-		default:
-			right = 4
+			if i == 1 {
+				right = int(closest)
+			}
+
+			palette[int(closest)] = Blue
+		}
+		palette[0] = DarkBlue
 	}
 
 	return &ScaleInfo{

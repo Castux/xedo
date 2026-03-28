@@ -86,8 +86,10 @@ func SetupLaunchpad(synth *Synth) *Launchpad {
 					pad.Synth.Shape++
 					pad.Synth.Shape %= NumShapes
 					fmt.Println("Synth switched to", ShapeNames[pad.Synth.Shape])
-				case 29:
+				case 89:
 					pad.SetupScale(pad.Scale.Divisions+1)
+				case 79:
+					pad.SetupScale(pad.Scale.Divisions-1)
 				}
 			}
 			return
