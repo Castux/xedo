@@ -2,8 +2,6 @@ package main
 
 import (
 	"math"
-
-	"gitlab.com/gomidi/midi/v2"
 )
 
 type ScaleInfo struct {
@@ -13,8 +11,7 @@ type ScaleInfo struct {
 	Palette   map[int]uint8
 }
 
-func (setup *ScaleInfo) KeyToNote(key uint8) int {
-	row, col := KeyToRowCol(key)
+func (setup *ScaleInfo) RowColToNote(row, col int) int {
 	return (row-1)*setup.UpStep + (col-1)*setup.RightStep
 }
 
@@ -27,29 +24,17 @@ func (scale *ScaleInfo) NoteToFreq(note int) float64 {
 	return 220.0 * math.Pow(2.0, octaves)
 }
 
-func (scale *ScaleInfo) OnEvent(msg midi.Message, ts int32, pad *Launchpad) {
-	var ch, key, vel uint8
-	var down bool
+func (scale *ScaleInfo) OnEvent(ev Event, pad *Launchpad) {
 
-	switch {
-	case msg.GetNoteStart(&ch, &key, &vel):
-		down = true
-	case msg.GetNoteEnd(&ch, &key):
-		down = false
-	default:
-		return
-	}
-
-	baseNote := scale.KeyToNote(key)
+	baseNote := scale.RowColToNote(ev.Row, ev.Col)
 	color := scale.NoteToColor(baseNote)
-	if down {
+	if ev.Down {
 		color = Red
 	}
 
 	for row := 1; row <= 8; row++ {
 		for col := 1; col <= 8; col++ {
-			key2 := KeyFromRowCol(row, col)
-			note := scale.KeyToNote(key2)
+			note := scale.RowColToNote(row, col)
 			if note == baseNote {
 				pad.DrawOneIndexed(row, col, color)
 			}
@@ -57,8 +42,8 @@ func (scale *ScaleInfo) OnEvent(msg midi.Message, ts int32, pad *Launchpad) {
 	}
 
 	freq := scale.NoteToFreq(baseNote)
-	if down {
-		pad.Synth.PlayNote(freq, float64(vel)/float64(0xff))
+	if ev.Down {
+		pad.Synth.PlayNote(freq, ev.Velocity)
 	} else {
 		pad.Synth.StopNote(freq)
 	}
@@ -69,8 +54,7 @@ func (pad *Launchpad) SetupScale(scale *ScaleInfo) {
 
 	for row := 8; row >= 1; row-- {
 		for col := 1; col <= 8; col++ {
-			key := KeyFromRowCol(row, col)
-			note := scale.KeyToNote(uint8(key))
+			note := scale.RowColToNote(row, col)
 			pad.DrawOneIndexed(row, col, scale.NoteToColor(note))
 		}
 	}

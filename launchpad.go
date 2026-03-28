@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"gitlab.com/gomidi/midi/v2"
 	"gitlab.com/gomidi/midi/v2/drivers"
 	_ "gitlab.com/gomidi/midi/v2/drivers/rtmididrv" // autoregisters driver
@@ -14,12 +13,18 @@ type Launchpad struct {
 	InPort  drivers.In
 	OutPort drivers.Out
 	Send    func(msg midi.Message) error
-	OnEvent func(msg midi.Message, timestamp int32, pad *Launchpad)
+	OnEvent func(ev Event, pad *Launchpad)
 	Stop    func()
 
 	Synth *Synth
 
 	Exit bool
+}
+
+type Event struct {
+	Row, Col int
+	Down bool
+	Velocity float64
 }
 
 func SetupLaunchpad(synth *Synth) *Launchpad {
@@ -44,8 +49,29 @@ func SetupLaunchpad(synth *Synth) *Launchpad {
 	}
 
 	pad.Stop, err = midi.ListenTo(pad.InPort, func(msg midi.Message, timestamp int32) {
+
+		var ch, key, vel uint8
+		var down bool
+
+		switch {
+		case msg.GetNoteStart(&ch, &key, &vel):
+			down = true
+		case msg.GetNoteEnd(&ch, &key):
+			down = false
+		default:
+			return
+		}
+		row, col := pad.KeyToRowCol(key)
+
+		ev := Event{
+			Row: row,
+			Col: col,
+			Down: down,
+			Velocity: float64(vel) / float64(0xff),
+		}
+
 		if pad.OnEvent != nil {
-			pad.OnEvent(msg, timestamp, &pad)
+			pad.OnEvent(ev, &pad)
 		}
 	})
 	if err != nil {
@@ -56,6 +82,14 @@ func SetupLaunchpad(synth *Synth) *Launchpad {
 	pad.Send(midi.SysEx(programmerMode))
 
 	return &pad
+}
+
+func (pad *Launchpad) KeyToRowCol(key uint8) (int, int) {
+	return int(key / 10), int(key % 10)
+}
+
+func (pad *Launchpad) KeyFromRowCol(row, col int) uint8 {
+	return uint8(10*row + col)
 }
 
 func (pad *Launchpad) Shutdown() {
@@ -121,40 +155,7 @@ func (pad *Launchpad) DrawAll(colors []color.Color) {
 	pad.Send(midi.SysEx(bytes))
 }
 
-func KeyToRowCol(key uint8) (int, int) {
-	return int(key / 10), int(key % 10)
-}
-
-func KeyFromRowCol(row, col int) uint8 {
-	return uint8(10*row + col)
-}
-
-func PrintMidiEvent(msg midi.Message, timestamp int32, pad *Launchpad) {
-	var ch, key, vel, controller, value uint8
-	var absolute uint16
-
-	switch {
-	case msg.GetNoteStart(&ch, &key, &vel):
-		fmt.Printf("starting note %s (%d), on channel %v with velocity %v\n", midi.Note(key), key, ch, vel)
-	case msg.GetNoteEnd(&ch, &key):
-		fmt.Printf("ending note %s on channel %v\n", midi.Note(key), ch)
-	case msg.GetControlChange(&ch, &controller, &value):
-		fmt.Printf("control change (%d, %d) on channel %v\n", controller, value, ch)
-
-		if controller == 98 {
-			pad.Exit = true
-			break
-		}
-
-	case msg.GetPitchBend(&ch, nil, &absolute):
-		fmt.Printf("pitch bend %d in channel %v\n", absolute, ch)
-	default:
-		// ignore
-	}
-}
-
 func (pad *Launchpad) DrawSprites() {
-	pad.OnEvent = PrintMidiEvent
 	sprites := LoadSprites()
 
 	for !pad.Exit {
