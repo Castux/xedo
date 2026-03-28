@@ -5,6 +5,7 @@ import (
 )
 
 type ScaleInfo struct {
+	Name      string
 	Divisions int
 	RightStep int
 	UpStep    int
@@ -53,8 +54,8 @@ func (scale *ScaleInfo) OnEvent(ev Event, pad *Launchpad) {
 	}
 }
 
-func (pad *Launchpad) SetupScale(scale *ScaleInfo) {
-	pad.Scale = scale
+func (pad *Launchpad) SetupScale() {
+	scale := Scales[pad.ScaleIndex]
 	pad.OnEvent = scale.OnEvent
 
 	for key := uint8(11); key <= 88; key++ {

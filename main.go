@@ -14,8 +14,6 @@ func main() {
 	pad := SetupLaunchpad(synth)
 	defer pad.Shutdown()
 
-	pad.SetupScale(&Major)
-
 	for !pad.Exit {
 
 	}
