@@ -2,6 +2,7 @@ package main
 
 import (
 	"math"
+	"slices"
 	"sync"
 
 	"github.com/gordonklaus/portaudio"
@@ -12,6 +13,11 @@ type Voice struct {
 	Volume     float64
 	Ticks      int
 	KeyOffTime int
+
+	Attack float64
+	Decay  float64
+
+	Dead bool
 }
 
 func (voice *Voice) GenerateSample(sampleRate float64) (float32, float32) {
@@ -20,7 +26,20 @@ func (voice *Voice) GenerateSample(sampleRate float64) (float32, float32) {
 	t := float64(voice.Ticks) / sampleRate
 	phase := 2 * math.Pi * voice.Freq * t
 
-	sample := float32(math.Sin(phase))
+	volume := voice.Volume
+	if t <= voice.Attack {
+		volume *= t / voice.Attack
+	}
+
+	keyOff := float64(voice.KeyOffTime) / sampleRate
+	if t >= keyOff {
+		volume *= max(0.0, 1.0-(t-keyOff)/voice.Decay)
+	}
+	if t >= keyOff+voice.Decay {
+		voice.Dead = true
+	}
+
+	sample := float32(math.Sin(phase) * volume)
 	return sample, sample
 }
 
@@ -29,7 +48,7 @@ type Synth struct {
 	SampleRate float64
 
 	Mutex        sync.Mutex
-	NotesPlaying map[float64]*Voice
+	NotesPlaying []*Voice
 }
 
 func SetupSynth() *Synth {
@@ -51,32 +70,35 @@ func SetupSynth() *Synth {
 		panic(err)
 	}
 
-	synth.NotesPlaying = make(map[float64]*Voice)
-
 	return &synth
 }
 
-func (synth *Synth) PlayNote(freq float64) {
+func (synth *Synth) PlayNote(freq float64, volume float64) {
 	synth.Mutex.Lock()
 	defer synth.Mutex.Unlock()
 
-	if synth.NotesPlaying[freq] != nil {
-		return
+	voice := &Voice{
+		Freq:       freq,
+		Volume:     volume,
+		Ticks:      0,
+		KeyOffTime: math.MaxInt,
+
+		Attack: 0.1,
+		Decay:  0.2,
 	}
 
-	synth.NotesPlaying[freq] = &Voice{
-		Freq: freq,
-		Volume: 1.0,
-		Ticks: 0,
-		KeyOffTime: 0,
-	}
+	synth.NotesPlaying = append(synth.NotesPlaying, voice)
 }
 
 func (synth *Synth) StopNote(freq float64) {
 	synth.Mutex.Lock()
 	defer synth.Mutex.Unlock()
 
-	delete(synth.NotesPlaying, freq)
+	for _, voice := range synth.NotesPlaying {
+		if voice.Freq == freq {
+			voice.KeyOffTime = voice.Ticks
+		}
+	}
 }
 
 func (synth *Synth) GenerateAudio(out [][]float32) {
@@ -91,6 +113,10 @@ func (synth *Synth) GenerateAudio(out [][]float32) {
 	}
 
 	for _, voice := range synth.NotesPlaying {
+		if voice.Dead {
+			continue
+		}
+
 		for i := range numSamples {
 			left, right := voice.GenerateSample(synth.SampleRate)
 			out[0][i] += left
@@ -98,13 +124,9 @@ func (synth *Synth) GenerateAudio(out [][]float32) {
 		}
 	}
 
-	numVoices := len(synth.NotesPlaying)
-	if numVoices > 0 {
-		for i := range numSamples {
-			out[0][i] /= float32(numVoices)
-			out[1][i] /= float32(numVoices)
-		}
-	}
+	synth.NotesPlaying = slices.DeleteFunc(synth.NotesPlaying, func(voice *Voice) bool {
+		return voice.Dead
+	})
 }
 
 func (synth *Synth) Shutdown() {
