@@ -1,4 +1,4 @@
-module xtet
+module xedo
 
 go 1.25.7
 

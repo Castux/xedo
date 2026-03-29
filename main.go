@@ -7,7 +7,7 @@ import (
 func main() {
 	demo := flag.Bool("demo", false, "start in demo mode")
 	baseFreq := flag.Float64("freq", 440.0, "base frequency")
-	startDivs := flag.Int("tet", 12, "divisions of octave at startup")
+	startDivs := flag.Int("edo", 12, "divisions of octave at startup")
 	flag.Parse()
 
 	synth := SetupSynth()

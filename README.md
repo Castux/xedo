@@ -1,8 +1,8 @@
-# XTET
+# XEDO
 
 *A microtonal sampler/synthesizer and isomorphic layout for the Launchpad X*
 
-Visually represents and plays [equal temperament tunings](https://en.wikipedia.org/wiki/Equal_temperament) (aka. TET or EDO).
+Visually represents and plays [equal temperament tunings](https://en.wikipedia.org/wiki/Equal_temperament) (aka. "n-TET" or "n EDO").
 
 ## Requirements
 
@@ -13,24 +13,24 @@ Visually represents and plays [equal temperament tunings](https://en.wikipedia.o
 
 ```
 go build .
-./xtet [--demo] [--tet <N>] [--freq <F>]
+./xedo [--demo] [--edo <N>] [--freq <F>]
 ```
 
 * Demo mode cycles through colorful pixel art
-* `--tet` sets the initial divisions (defaults to 12)
+* `--edo` sets the initial number of divisions of the octave (defaults to 12)
 * `--freq` sets the base frequency for the layout (defaults to 440Hz)
 
 # View
 
-For each TET tuning, the pad represents the base frequency (and its other octaves) in purple.
+For each EDO tuning, the pad represents the base frequency (and its other octaves) in purple.
 
-The key layout is isomorphic: moving right always increases by a fixed number of steps, and moving up similarly. For instance, for the standard 12TET, we move up by one semitone and right by one full tone. The program always fits a full octave horizontally.
+The key layout is isomorphic: moving right always increases by a fixed number of steps, and moving up similarly. For instance, for the standard 12 EDO, we move up by one semitone and right by one full tone. The program always fits a full octave horizontally.
 
 The layout tiles infinitely in all directions, and a single note appears multiple times. When pressing a key, all notes of the same pitch are lit up in red.
 
 It then colors an equivalent to a standard major scale within this tuning, in blue.
 
-For TET tunings that can be exactly divided into 5 large intervals and 2 small intervals, it will map to the major scale exactly. For instance, the 19TET octave is split into 5 “tones” of 3 steps, and 2 “semitones” of 2 steps.
+For tunings that can be exactly divided into 5 large intervals and 2 small intervals, it will map to the major scale exactly. For instance, in 19 EDO, the octave is split into 5 “tones” of 3 steps, and 2 “semitones” of 2 steps.
 
 For the others, it will find the closest approximation.
 
@@ -49,4 +49,4 @@ For the others, it will find the closest approximation.
 
 ## License
 
-XTET is Copyright Noé Falzon 2026, and published under the [MIT license](LICENSE.md)
+XEDO is Copyright Noé Falzon 2026, and published under the [MIT license](LICENSE.md)

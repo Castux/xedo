@@ -21,10 +21,9 @@ type Launchpad struct {
 	RowOffset int
 	ColOffset int
 
-	BaseFreq   float64
-	Synth      *Synth
-	ScaleIndex int
-	Scale      *ScaleInfo
+	BaseFreq float64
+	Synth    *Synth
+	Tuning   *Tuning
 
 	Exit bool
 }
@@ -73,7 +72,7 @@ func SetupLaunchpad(synth *Synth, demo bool, baseFreq float64, startDivs int) *L
 		pad.DrawRaw(96, DarkBlue)
 		pad.DrawRaw(97, Pink)
 		pad.DrawRaw(98, Red)
-		pad.SetupScale(startDivs)
+		pad.SetupTuning(startDivs)
 	}
 
 	return &pad
@@ -110,11 +109,11 @@ func (pad *Launchpad) OnMidiEvent(msg midi.Message, timestamp int32) {
 				pad.Synth.Shape %= NumShapes
 				fmt.Println("Synth switched to", ShapeNames[pad.Synth.Shape])
 			case 95:
-				if pad.Scale.Divisions > 1 {
-					pad.SetupScale(pad.Scale.Divisions - 1)
+				if pad.Tuning.Divisions > 1 {
+					pad.SetupTuning(pad.Tuning.Divisions - 1)
 				}
 			case 96:
-				pad.SetupScale(pad.Scale.Divisions + 1)
+				pad.SetupTuning(pad.Tuning.Divisions + 1)
 			case 19:
 				pad.Synth.TogglePedal()
 				if pad.Synth.Pedal {

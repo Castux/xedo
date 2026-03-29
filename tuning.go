@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math"
 )
 
@@ -16,7 +15,6 @@ const (
 )
 
 func SolveExactMapping(divisions int) (int, int) {
-
 	for big := 1; big <= divisions/5; big++ {
 		for small := 1; small < big; small++ {
 			if 5*big+2*small == divisions {
@@ -30,7 +28,7 @@ func SolveExactMapping(divisions int) (int, int) {
 
 var MajorSemitones = []int{0, 2, 4, 5, 7, 9, 11}
 
-func MakeScale(divisions int) *ScaleInfo {
+func MakeTuning(divisions int) *Tuning {
 
 	right := 1
 	palette := make(map[int]uint8)
@@ -69,8 +67,7 @@ func MakeScale(divisions int) *ScaleInfo {
 		palette[0] = DarkBlue
 	}
 
-	return &ScaleInfo{
-		Name:      fmt.Sprintf("%dtet", divisions),
+	return &Tuning{
 		Divisions: divisions,
 		RightStep: right,
 		UpStep:    1,
