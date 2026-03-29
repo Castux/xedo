@@ -8,6 +8,13 @@ import (
 	"github.com/gordonklaus/portaudio"
 )
 
+type Voice interface {
+	GenerateSample(sampleRate float64) (float32, float32)
+	Frequency() float64
+	KeyOff()
+	IsDead() bool
+}
+
 const (
 	Sine = iota
 	Square
@@ -18,7 +25,7 @@ const (
 
 var ShapeNames = []string{"sine", "square", "saw", "triangle"}
 
-type Voice struct {
+type SynthVoice struct {
 	Freq       float64
 	Volume     float64
 	Ticks      int
@@ -31,7 +38,7 @@ type Voice struct {
 	Dead bool
 }
 
-func (voice *Voice) GenerateSample(sampleRate float64) (float32, float32) {
+func (voice *SynthVoice) GenerateSample(sampleRate float64) (float32, float32) {
 	voice.Ticks++
 
 	t := float64(voice.Ticks) / sampleRate
@@ -70,13 +77,26 @@ func (voice *Voice) GenerateSample(sampleRate float64) (float32, float32) {
 	return float32(sample), float32(sample)
 }
 
+func (voice *SynthVoice) IsDead() bool {
+	return voice.Dead
+}
+
+func (voice *SynthVoice) Frequency() float64 {
+	return voice.Freq
+}
+
+func (voice *SynthVoice) KeyOff() {
+	voice.KeyOffTime = voice.Ticks
+}
+
 type Synth struct {
 	Stream     *portaudio.Stream
 	SampleRate float64
 	Shape      int
+	Piano *Sampler
 
 	Mutex        sync.Mutex
-	NotesPlaying []*Voice
+	Voices      []Voice
 }
 
 func SetupSynth() *Synth {
@@ -85,9 +105,12 @@ func SetupSynth() *Synth {
 		panic(err)
 	}
 
+	piano := MakeSampler()
+
 	synth := Synth{
 		SampleRate: 44100,
 		Shape:      Sine,
+		Piano: piano,
 	}
 
 	synth.Stream, err = portaudio.OpenDefaultStream(0, 2, synth.SampleRate, 0, synth.GenerateAudio)
@@ -106,7 +129,7 @@ func (synth *Synth) PlayNote(freq float64, volume float64) {
 	synth.Mutex.Lock()
 	defer synth.Mutex.Unlock()
 
-	voice := &Voice{
+	voice := &SynthVoice{
 		Freq:       freq,
 		Volume:     volume,
 		Ticks:      0,
@@ -117,16 +140,16 @@ func (synth *Synth) PlayNote(freq float64, volume float64) {
 		Decay:  0.2,
 	}
 
-	synth.NotesPlaying = append(synth.NotesPlaying, voice)
+	synth.Voices = append(synth.Voices, voice)
 }
 
 func (synth *Synth) StopNote(freq float64) {
 	synth.Mutex.Lock()
 	defer synth.Mutex.Unlock()
 
-	for _, voice := range synth.NotesPlaying {
-		if voice.Freq == freq {
-			voice.KeyOffTime = voice.Ticks
+	for _, voice := range synth.Voices {
+		if voice.Frequency() == freq {
+			voice.KeyOff()
 		}
 	}
 }
@@ -142,8 +165,8 @@ func (synth *Synth) GenerateAudio(out [][]float32) {
 		out[1][i] = 0.0
 	}
 
-	for _, voice := range synth.NotesPlaying {
-		if voice.Dead {
+	for _, voice := range synth.Voices {
+		if voice.IsDead() {
 			continue
 		}
 
@@ -154,8 +177,8 @@ func (synth *Synth) GenerateAudio(out [][]float32) {
 		}
 	}
 
-	synth.NotesPlaying = slices.DeleteFunc(synth.NotesPlaying, func(voice *Voice) bool {
-		return voice.Dead
+	synth.Voices = slices.DeleteFunc(synth.Voices, func(voice Voice) bool {
+		return voice.IsDead()
 	})
 }
 
