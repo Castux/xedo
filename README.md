@@ -4,6 +4,8 @@
 
 Visually represents and plays [equal temperament tunings](https://en.wikipedia.org/wiki/Equal_temperament) (aka. "n-TET" or "n EDO").
 
+![Launchpad](launchpad.jpg)
+
 ## Requirements
 
 * The Go compiler
