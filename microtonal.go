@@ -66,7 +66,7 @@ func (pad *Launchpad) SetupScale(divisions int) {
 		pad.Scale = scale
 		pad.OnEvent = scale.OnEvent
 
-		fmt.Println("Switched to", divisions)
+		fmt.Println("Switched to", divisions, "TET")
 	}
 
 	pad.RedrawAllNotes()

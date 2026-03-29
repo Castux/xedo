@@ -90,6 +90,8 @@ func LoadPianoSamples() [][]*Sample {
 		panic(err)
 	}
 
+	fmt.Println("Loading piano samples...")
+
 	samplesPerVelocity := make([][]*Sample, 16)
 
 	for _, entry := range dir {
@@ -113,6 +115,8 @@ func LoadPianoSamples() [][]*Sample {
 			return cmp.Compare(a.Freq, b.Freq)
 		})
 	}
+
+	fmt.Printf("Loaded %d samples\n", len(samplesPerVelocity)*len(samplesPerVelocity[0]))
 
 	return samplesPerVelocity
 }
@@ -187,6 +191,10 @@ func (voice *SamplerVoice) GenerateSample(sampleRate float64) (float32, float32)
 	keyOff := float64(voice.KeyOffTime) / sampleRate
 	if t >= keyOff {
 		volume *= max(0.0, 1.0-(t-keyOff)/SamplerDecay)
+	}
+	if t >= keyOff+SamplerDecay {
+		voice.Dead = true
+		return 0, 0
 	}
 
 	left := LerpWithNext(voice.Sample.Left, index, frac) * volume

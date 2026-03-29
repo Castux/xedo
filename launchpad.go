@@ -12,11 +12,11 @@ import (
 )
 
 type Launchpad struct {
-	InPort  drivers.In
-	OutPort drivers.Out
-	Send    func(msg midi.Message) error
-	OnEvent func(ev Event, pad *Launchpad)
-	Stop    func()
+	InPort     drivers.In
+	OutPort    drivers.Out
+	Send       func(msg midi.Message) error
+	OnEvent    func(ev Event, pad *Launchpad)
+	StopMidiCB func()
 
 	RowOffset int
 	ColOffset int
@@ -55,7 +55,7 @@ func SetupLaunchpad(synth *Synth) *Launchpad {
 		panic(err)
 	}
 
-	pad.Stop, err = midi.ListenTo(pad.InPort, func(msg midi.Message, timestamp int32) {
+	pad.StopMidiCB, err = midi.ListenTo(pad.InPort, func(msg midi.Message, timestamp int32) {
 
 		var ch, key, vel uint8
 		var down bool
@@ -82,14 +82,23 @@ func SetupLaunchpad(synth *Synth) *Launchpad {
 					pad.RedrawAllNotes()
 				case 98:
 					pad.Exit = true
-				case 19:
+				case 97:
 					pad.Synth.Shape++
 					pad.Synth.Shape %= NumShapes
 					fmt.Println("Synth switched to", ShapeNames[pad.Synth.Shape])
-				case 89:
+				case 95:
+					if pad.Scale.Divisions > 1 {
+						pad.SetupScale(pad.Scale.Divisions - 1)
+					}
+				case 96:
 					pad.SetupScale(pad.Scale.Divisions + 1)
-				case 79:
-					pad.SetupScale(pad.Scale.Divisions - 1)
+				case 19:
+					pad.Synth.TogglePedal()
+					if pad.Synth.Pedal {
+						pad.DrawRaw(19, Yellow)
+					} else {
+						pad.DrawRaw(19, 0)
+					}
 				}
 			}
 			return
@@ -117,6 +126,10 @@ func SetupLaunchpad(synth *Synth) *Launchpad {
 	pad.Send(midi.SysEx(programmerMode))
 
 	pad.SetupScale(12)
+	pad.DrawRaw(95, DarkBlue)
+	pad.DrawRaw(96, DarkBlue)
+	pad.DrawRaw(97, Pink)
+	pad.DrawRaw(98, Red)
 
 	return &pad
 }
@@ -149,11 +162,16 @@ func (pad *Launchpad) Shutdown() {
 	custom4 := []byte{0x00, 0x20, 0x29, 0x02, 0x0C, 0x00, 0x07}
 	pad.Send(midi.SysEx(custom4))
 
-	pad.Stop()
+	pad.StopMidiCB()
+	midi.CloseDriver()
 }
 
 func (pad *Launchpad) DrawOneIndexed(row, col int, color uint8) {
 	key := pad.KeyFromRowCol(row, col)
+	pad.Send(midi.NoteOn(0, uint8(key), color))
+}
+
+func (pad *Launchpad) DrawRaw(key, color uint8) {
 	pad.Send(midi.NoteOn(0, uint8(key), color))
 }
 

@@ -98,6 +98,7 @@ type Synth struct {
 
 	Mutex  sync.Mutex
 	Voices []Voice
+	Pedal  bool
 }
 
 func SetupSynth() *Synth {
@@ -151,6 +152,10 @@ func (synth *Synth) PlayNote(freq float64, volume float64) {
 }
 
 func (synth *Synth) StopNote(freq float64) {
+	if synth.Pedal {
+		return
+	}
+
 	synth.Mutex.Lock()
 	defer synth.Mutex.Unlock()
 
@@ -160,6 +165,21 @@ func (synth *Synth) StopNote(freq float64) {
 		}
 	}
 }
+
+func (synth *Synth) TogglePedal() {
+	synth.Pedal = !synth.Pedal
+
+	if !synth.Pedal {
+		synth.Mutex.Lock()
+		defer synth.Mutex.Unlock()
+
+		for _, voice := range synth.Voices {
+			voice.KeyOff()
+		}
+	}
+}
+
+const BaseGain = 0.75
 
 func (synth *Synth) GenerateAudio(out [][]float32) {
 	synth.Mutex.Lock()
@@ -181,6 +201,19 @@ func (synth *Synth) GenerateAudio(out [][]float32) {
 			left, right := voice.GenerateSample(synth.SampleRate)
 			out[0][i] += left
 			out[1][i] += right
+		}
+	}
+
+	for i := range numSamples {
+		// The poor man's compressor
+		out[0][i] *= BaseGain
+		out[1][i] *= BaseGain
+
+		if out[0][i] >= BaseGain {
+			out[0][i] = BaseGain + (out[0][i]-BaseGain)/3.0
+		}
+		if out[1][i] >= BaseGain {
+			out[1][i] = BaseGain + (out[1][i]-BaseGain)/3.0
 		}
 	}
 
