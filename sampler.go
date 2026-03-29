@@ -155,25 +155,26 @@ type SamplerVoice struct {
 	Sample *Sample
 }
 
+func LerpWithNext(values []float64, index int, frac float64) float64 {
+	return values[index]*(1-frac) + values[index+1]*frac
+}
+
 func (voice *SamplerVoice) GenerateSample(sampleRate float64) (float32, float32) {
 	voice.Ticks++
 
 	freqRatio := voice.Freq / voice.Sample.Freq
-	sample := float64(voice.Ticks) * freqRatio
-	index := int(math.Round(sample))
+	indexReal, frac := math.Modf(float64(voice.Ticks) * freqRatio)
+	index := int(indexReal)
 
-	// t := float64(voice.Ticks) / sampleRate
-	// period := 1.0 / voice.Freq
-
-	// sample := 0.0
-
-	if index >= len(voice.Sample.Left) {
+	if index+1 >= len(voice.Sample.Left) {
 		voice.Dead = true
 		return 0.0, 0.0
 	}
 
-	return float32(voice.Sample.Left[index]),
-		float32(voice.Sample.Right[index])
+	left := LerpWithNext(voice.Sample.Left, index, frac)
+	right := LerpWithNext(voice.Sample.Right, index, frac)
+
+	return float32(left), float32(right)
 }
 
 func (voice *SamplerVoice) Frequency() float64 {
