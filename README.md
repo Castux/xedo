@@ -2,7 +2,7 @@
 
 *A microtonal sampler/synthesizer and isomorphic layout for the Launchpad X*
 
-Visually represents and plays [equal temperament tunings](https://en.wikipedia.org/wiki/Equal_temperament) (aka. "n-TET" or "n EDO").
+Visually represents and plays [equal temperament tunings](https://en.wikipedia.org/wiki/Equal_temperament) (aka. "n-TET" or "n EDO"). Written in 48 hours during an audio hackathon.
 
 ![Launchpad](launchpad.jpg)
 
@@ -22,7 +22,7 @@ go build .
 * `--edo` sets the initial number of divisions of the octave (defaults to 12)
 * `--freq` sets the base frequency for the layout (defaults to 440Hz)
 
-# View
+## View
 
 For each EDO tuning, the pad represents the base frequency (and its other octaves) in purple.
 
