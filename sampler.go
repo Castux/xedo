@@ -171,8 +171,16 @@ func (voice *SamplerVoice) GenerateSample(sampleRate float64) (float32, float32)
 		return 0.0, 0.0
 	}
 
-	left := LerpWithNext(voice.Sample.Left, index, frac)
-	right := LerpWithNext(voice.Sample.Right, index, frac)
+	volume := voice.Volume
+
+	t := float64(voice.Ticks) / sampleRate
+	keyOff := float64(voice.KeyOffTime) / sampleRate
+	if t >= keyOff {
+		volume *= max(0.0, 1.0-(t-keyOff)/0.2)
+	}
+
+	left := LerpWithNext(voice.Sample.Left, index, frac) * volume
+	right := LerpWithNext(voice.Sample.Right, index, frac) * volume
 
 	return float32(left), float32(right)
 }
