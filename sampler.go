@@ -58,7 +58,7 @@ func LoadWav(path string) ([]float64, []float64) {
 	return left, right
 }
 
-var SampleNameRegex = regexp.MustCompile(`(C|D#|F#|A)(\d)v10\.wav`)
+var SampleNameRegex = regexp.MustCompile(`(C|D#|F#|A)(\d)v(\d+)\.wav`)
 
 var NameToPitchSteps = map[string]int{
 	"C":  -9,
@@ -84,37 +84,44 @@ type Sample struct {
 
 const SampleDir = "piano"
 
-func LoadPianoSamples() []*Sample {
+func LoadPianoSamples() [][]*Sample {
 	dir, err := os.ReadDir(SampleDir)
 	if err != nil {
 		panic(err)
 	}
 
-	samples := []*Sample{}
+	samplesPerVelocity := make([][]*Sample, 16)
 
 	for _, entry := range dir {
 		submatches := SampleNameRegex.FindStringSubmatch(entry.Name())
 		if len(submatches) != 0 {
 			note := submatches[1]
 			octave, _ := strconv.Atoi(submatches[2])
+			velocity, _ := strconv.Atoi(submatches[3])
+			velocity--
+
 			freq := NoteNameToPitch(note, octave)
 
 			left, right := LoadWav(SampleDir + "/" + entry.Name())
 
-			samples = append(samples, &Sample{note, octave, freq, left, right})
+			samplesPerVelocity[velocity] = append(samplesPerVelocity[velocity], &Sample{note, octave, freq, left, right})
 		}
 	}
 
-	slices.SortFunc(samples, func(a, b *Sample) int {
-		return cmp.Compare(a.Freq, b.Freq)
-	})
+	for _, samples := range samplesPerVelocity {
+		slices.SortFunc(samples, func(a, b *Sample) int {
+			return cmp.Compare(a.Freq, b.Freq)
+		})
+	}
 
-	return samples
+	return samplesPerVelocity
 }
 
 type Sampler struct {
-	Samples []*Sample
+	Samples [][]*Sample
 }
+
+const SamplerDecay = 0.2
 
 func MakeSampler() *Sampler {
 	samples := LoadPianoSamples()
@@ -129,7 +136,10 @@ func (sampler *Sampler) PlayNote(freq float64, volume float64) Voice {
 	var closest *Sample
 	var minDist float64 = math.Inf(1)
 
-	for _, sample := range sampler.Samples {
+	velocity := int(volume * float64(len(sampler.Samples)-1))
+	samples := sampler.Samples[velocity]
+
+	for _, sample := range samples {
 		dist := math.Abs(sample.Freq - freq)
 		if dist < minDist {
 			closest = sample
@@ -176,7 +186,7 @@ func (voice *SamplerVoice) GenerateSample(sampleRate float64) (float32, float32)
 	t := float64(voice.Ticks) / sampleRate
 	keyOff := float64(voice.KeyOffTime) / sampleRate
 	if t >= keyOff {
-		volume *= max(0.0, 1.0-(t-keyOff)/0.2)
+		volume *= max(0.0, 1.0-(t-keyOff)/SamplerDecay)
 	}
 
 	left := LerpWithNext(voice.Sample.Left, index, frac) * volume

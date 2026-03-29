@@ -102,7 +102,7 @@ func SetupLaunchpad(synth *Synth) *Launchpad {
 			Row:      row,
 			Col:      col,
 			Down:     down,
-			Velocity: float64(vel) / float64(0xff),
+			Velocity: float64(vel) / float64(0x7f),
 		}
 
 		if pad.OnEvent != nil {
