@@ -34,14 +34,14 @@ It then colors an equivalent to a standard major scale within this tuning, in bl
 
 For tunings that can be exactly divided into 5 large intervals and 2 small intervals, it will map to the major scale exactly. For instance, in 19 EDO, the octave is split into 5 “tones” of 3 steps, and 2 “semitones” of 2 steps.
 
-For the others, it will find the closest approximation.
+For the others, it will find the closest approximation to the frequency ratios of the major scale in 12 EDO.
 
 ## Shortcuts
 
-* The four arrow buttons shift the pad’s view to access lower or higher octaves.
+* The four arrow buttons shift the pad’s view by one key in the given direction. Can be useful to access lower or higher octaves.
 * The blue buttons at the top of the pad (“Session” and “Note”) are used to increase or decrease the number of divisions of the octave.
 * The pink button (“Custom”) cycles through instruments (piano, sine, square, saw, triangle).
-* The red button shuts down the player
+* The red button shuts down the player.
 * The bottom right button (“> Record arm”) toggles the pedal (keeping sounds playing even after releasing the keys).
 
 ## Credits
