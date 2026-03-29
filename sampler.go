@@ -79,10 +79,11 @@ type Sample struct {
 	Octave int
 	Freq   float64
 	Left   []float64
-	Right   []float64
+	Right  []float64
 }
 
 const SampleDir = "piano"
+
 func LoadPianoSamples() []*Sample {
 	dir, err := os.ReadDir(SampleDir)
 	if err != nil {
@@ -121,4 +122,66 @@ func MakeSampler() *Sampler {
 	return &Sampler{
 		Samples: samples,
 	}
+}
+
+func (sampler *Sampler) PlayNote(freq float64, volume float64) Voice {
+
+	var closest *Sample
+	var minDist float64 = math.Inf(1)
+
+	for _, sample := range sampler.Samples {
+		dist := math.Abs(sample.Freq - freq)
+		if dist < minDist {
+			closest = sample
+			minDist = dist
+		}
+	}
+
+	return &SamplerVoice{
+		Freq:       freq,
+		Volume:     volume,
+		KeyOffTime: math.MaxInt,
+		Sample:     closest,
+	}
+}
+
+type SamplerVoice struct {
+	Freq       float64
+	Volume     float64
+	Ticks      int
+	KeyOffTime int
+
+	Dead   bool
+	Sample *Sample
+}
+
+func (voice *SamplerVoice) GenerateSample(sampleRate float64) (float32, float32) {
+	voice.Ticks++
+
+	freqRatio := voice.Freq / voice.Sample.Freq
+	sample := float64(voice.Ticks) * freqRatio
+	index := int(math.Round(sample))
+
+	// t := float64(voice.Ticks) / sampleRate
+	// period := 1.0 / voice.Freq
+
+	// sample := 0.0
+
+	if index >= len(voice.Sample.Left) {
+		voice.Dead = true
+		return 0.0, 0.0
+	}
+
+	return float32(voice.Sample.Left[index]),
+		float32(voice.Sample.Right[index])
+}
+
+func (voice *SamplerVoice) Frequency() float64 {
+	return voice.Freq
+}
+func (voice *SamplerVoice) IsDead() bool {
+	return voice.Dead
+}
+func (voice *SamplerVoice) KeyOff() {
+	voice.KeyOffTime = voice.Ticks
 }

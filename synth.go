@@ -20,10 +20,11 @@ const (
 	Square
 	Saw
 	Triangle
+	Piano
 	NumShapes
 )
 
-var ShapeNames = []string{"sine", "square", "saw", "triangle"}
+var ShapeNames = []string{"sine", "square", "saw", "triangle", "piano"}
 
 type SynthVoice struct {
 	Freq       float64
@@ -93,10 +94,10 @@ type Synth struct {
 	Stream     *portaudio.Stream
 	SampleRate float64
 	Shape      int
-	Piano *Sampler
+	Piano      *Sampler
 
-	Mutex        sync.Mutex
-	Voices      []Voice
+	Mutex  sync.Mutex
+	Voices []Voice
 }
 
 func SetupSynth() *Synth {
@@ -109,8 +110,8 @@ func SetupSynth() *Synth {
 
 	synth := Synth{
 		SampleRate: 44100,
-		Shape:      Sine,
-		Piano: piano,
+		Shape:      Piano,
+		Piano:      piano,
 	}
 
 	synth.Stream, err = portaudio.OpenDefaultStream(0, 2, synth.SampleRate, 0, synth.GenerateAudio)
@@ -129,15 +130,21 @@ func (synth *Synth) PlayNote(freq float64, volume float64) {
 	synth.Mutex.Lock()
 	defer synth.Mutex.Unlock()
 
-	voice := &SynthVoice{
-		Freq:       freq,
-		Volume:     volume,
-		Ticks:      0,
-		KeyOffTime: math.MaxInt,
+	var voice Voice
 
-		Shape:  synth.Shape,
-		Attack: 0.05,
-		Decay:  0.2,
+	if synth.Shape == Piano {
+		voice = synth.Piano.PlayNote(freq, volume)
+	} else {
+		voice = &SynthVoice{
+			Freq:       freq,
+			Volume:     volume,
+			Ticks:      0,
+			KeyOffTime: math.MaxInt,
+
+			Shape:  synth.Shape,
+			Attack: 0.05,
+			Decay:  0.2,
+		}
 	}
 
 	synth.Voices = append(synth.Voices, voice)
