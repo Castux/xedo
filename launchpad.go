@@ -21,6 +21,7 @@ type Launchpad struct {
 	RowOffset int
 	ColOffset int
 
+	BaseFreq   float64
 	Synth      *Synth
 	ScaleIndex int
 	Scale      *ScaleInfo
@@ -34,11 +35,13 @@ type Event struct {
 	Velocity float64
 }
 
-func SetupLaunchpad(synth *Synth, demo bool, startDivs int) *Launchpad {
-	var pad Launchpad
+func SetupLaunchpad(synth *Synth, demo bool, baseFreq float64, startDivs int) *Launchpad {
 	var err error
 
-	pad.Synth = synth
+	pad := Launchpad{
+		Synth:    synth,
+		BaseFreq: baseFreq,
+	}
 
 	pad.InPort, err = midi.FindInPort("Launchpad X LPX MIDI Out")
 	if err != nil {

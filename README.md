@@ -13,15 +13,16 @@ Visually represents and plays [equal temperament tunings](https://en.wikipedia.o
 
 ```
 go build .
-./xtet [--demo] [--tet <N>]
+./xtet [--demo] [--tet <N>] [--freq <F>]
 ```
 
 * Demo mode cycles through colorful pixel art
 * `--tet` sets the initial divisions (defaults to 12)
+* `--freq` sets the base frequency for the layout (defaults to 440Hz)
 
 # View
 
-For each TET tuning, the pad represents a base note (At 440Hz and other octaves) in purple.
+For each TET tuning, the pad represents the base frequency (and its other octaves) in purple.
 
 The key layout is isomorphic: moving right always increases by a fixed number of steps, and moving up similarly. For instance, for the standard 12TET, we move up by one semitone and right by one full tone. The program always fits a full octave horizontally.
 

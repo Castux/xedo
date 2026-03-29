@@ -25,9 +25,9 @@ func (scale *ScaleInfo) NoteToColor(note int) uint8 {
 	return scale.Palette[note%scale.Divisions]
 }
 
-func (scale *ScaleInfo) NoteToFreq(note int) float64 {
+func (scale *ScaleInfo) NoteToFreqRatio(note int) float64 {
 	octaves := float64(note) / float64(scale.Divisions)
-	return 220.0 * math.Pow(2.0, octaves)
+	return math.Pow(2.0, octaves)
 }
 
 func (scale *ScaleInfo) OnEvent(ev Event, pad *Launchpad) {
@@ -45,7 +45,7 @@ func (scale *ScaleInfo) OnEvent(ev Event, pad *Launchpad) {
 		}
 	})
 
-	freq := scale.NoteToFreq(baseNote)
+	freq := pad.BaseFreq * scale.NoteToFreqRatio(baseNote)
 	if ev.Down {
 		pad.Synth.PlayNote(freq, ev.Velocity)
 	} else {
