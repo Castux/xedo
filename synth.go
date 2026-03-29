@@ -39,6 +39,9 @@ type SynthVoice struct {
 	Dead bool
 }
 
+const SynthGain = 0.5
+const QuietSynthGain = 1.25
+
 func (voice *SynthVoice) GenerateSample(sampleRate float64) (float32, float32) {
 	voice.Ticks++
 
@@ -58,7 +61,7 @@ func (voice *SynthVoice) GenerateSample(sampleRate float64) (float32, float32) {
 	case Saw:
 		sample = 2.0*math.Mod(t, period)/period - 1.0
 	case Triangle:
-		sample = 2.0 * math.Abs(t/period-math.Floor(t/period+0.5))
+		sample = 2.0 * math.Abs(t/period-math.Floor(t/period+0.5)) * QuietSynthGain
 	}
 
 	volume := voice.Volume
@@ -74,7 +77,7 @@ func (voice *SynthVoice) GenerateSample(sampleRate float64) (float32, float32) {
 		voice.Dead = true
 	}
 
-	sample *= volume
+	sample *= volume * SynthGain
 	return float32(sample), float32(sample)
 }
 

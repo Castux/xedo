@@ -9,6 +9,7 @@ Visually represents and plays [equal temperament tunings](https://en.wikipedia.o
 ## Requirements
 
 * The Go compiler
+* [portaudio](https://files.portaudio.com/download.html) (also available via `brew` on MacOS and `apt` on Debian based Linux distributions)
 * A Novation Launchpad X
 
 ## Usage
