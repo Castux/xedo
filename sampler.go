@@ -12,39 +12,39 @@ import (
 	"github.com/jonchammer/audio-io/wave"
 )
 
-func LoadWav(path string) ([]float64, []float64) {
+func LoadWav(path string) ([]float64, []float64, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 	defer file.Close()
 
 	r := wave.NewReader(file)
 	header, err := r.Header()
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 
 	sampleType, err := header.SampleType()
 	if err != nil || sampleType != wave.SampleTypeInt16 {
-		panic("Bad sample type")
+		return nil, nil, fmt.Errorf("bad sample type in %s", path)
 	}
 
 	if header.ChannelCount() != 2 {
-		panic("Expected stereo samples")
+		return nil, nil, fmt.Errorf("expected stereo samples in %s", path)
 	}
 
 	if header.FrameRate() != 44100 {
-		panic("Expected 44100 sample rate")
+		return nil, nil, fmt.Errorf("expected 44100 sample rate in %s", path)
 	}
 
 	data := make([]int16, header.SampleCount())
 	samplesRead, err := r.ReadInt16(data)
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
 	if samplesRead != int(header.SampleCount()) {
-		panic(fmt.Sprintf("Did not read all samples for %s", path))
+		return nil, nil, fmt.Errorf("did not read all samples for %s", path)
 	}
 
 	left := make([]float64, samplesRead/2)
@@ -55,7 +55,7 @@ func LoadWav(path string) ([]float64, []float64) {
 		right[i] = float64(data[2*i+1]) / scale
 	}
 
-	return left, right
+	return left, right, nil
 }
 
 var SampleNameRegex = regexp.MustCompile(`(C|D#|F#|A)(\d)v(\d+)\.wav`)
@@ -84,10 +84,10 @@ type Sample struct {
 
 const SampleDir = "piano"
 
-func LoadPianoSamples() [][]*Sample {
+func LoadPianoSamples() ([][]*Sample, error) {
 	dir, err := os.ReadDir(SampleDir)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	fmt.Println("Loading piano samples...")
@@ -104,7 +104,10 @@ func LoadPianoSamples() [][]*Sample {
 
 			freq := NoteNameToPitch(note, octave)
 
-			left, right := LoadWav(SampleDir + "/" + entry.Name())
+			left, right, err := LoadWav(SampleDir + "/" + entry.Name())
+			if err != nil {
+				return nil, err
+			}
 
 			samplesPerVelocity[velocity] = append(samplesPerVelocity[velocity], &Sample{note, octave, freq, left, right})
 		}
@@ -118,7 +121,7 @@ func LoadPianoSamples() [][]*Sample {
 
 	fmt.Printf("Loaded %d samples\n", len(samplesPerVelocity)*len(samplesPerVelocity[0]))
 
-	return samplesPerVelocity
+	return samplesPerVelocity, nil
 }
 
 type Sampler struct {
@@ -127,12 +130,15 @@ type Sampler struct {
 
 const SamplerDecay = 0.2
 
-func MakeSampler() *Sampler {
-	samples := LoadPianoSamples()
+func MakeSampler() (*Sampler, error) {
+	samples, err := LoadPianoSamples()
+	if err != nil {
+		return nil, err
+	}
 
 	return &Sampler{
 		Samples: samples,
-	}
+	}, nil
 }
 
 func (sampler *Sampler) PlayNote(freq float64, volume float64) Voice {

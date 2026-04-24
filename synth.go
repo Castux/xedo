@@ -104,13 +104,17 @@ type Synth struct {
 	Pedal  bool
 }
 
-func SetupSynth() *Synth {
+func SetupSynth() (*Synth, error) {
 	err := portaudio.Initialize()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	piano := MakeSampler()
+	piano, err := MakeSampler()
+	if err != nil {
+		portaudio.Terminate()
+		return nil, err
+	}
 
 	synth := Synth{
 		SampleRate: 44100,
@@ -120,14 +124,17 @@ func SetupSynth() *Synth {
 
 	synth.Stream, err = portaudio.OpenDefaultStream(0, 2, synth.SampleRate, 0, synth.GenerateAudio)
 	if err != nil {
-		panic(err)
+		portaudio.Terminate()
+		return nil, err
 	}
 	err = synth.Stream.Start()
 	if err != nil {
-		panic(err)
+		synth.Stream.Close()
+		portaudio.Terminate()
+		return nil, err
 	}
 
-	return &synth
+	return &synth, nil
 }
 
 func (synth *Synth) PlayNote(freq float64, volume float64) {
@@ -155,12 +162,12 @@ func (synth *Synth) PlayNote(freq float64, volume float64) {
 }
 
 func (synth *Synth) StopNote(freq float64) {
+	synth.Mutex.Lock()
+	defer synth.Mutex.Unlock()
+
 	if synth.Pedal {
 		return
 	}
-
-	synth.Mutex.Lock()
-	defer synth.Mutex.Unlock()
 
 	for _, voice := range synth.Voices {
 		if voice.Frequency() == freq {
@@ -170,12 +177,11 @@ func (synth *Synth) StopNote(freq float64) {
 }
 
 func (synth *Synth) TogglePedal() {
+	synth.Mutex.Lock()
+	defer synth.Mutex.Unlock()
+
 	synth.Pedal = !synth.Pedal
-
 	if !synth.Pedal {
-		synth.Mutex.Lock()
-		defer synth.Mutex.Unlock()
-
 		for _, voice := range synth.Voices {
 			voice.KeyOff()
 		}

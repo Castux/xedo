@@ -6,14 +6,17 @@ import (
 	"os"
 )
 
-func LoadSprites() image.Image {
-	f, _ := os.Open("sprites.png")
+func LoadSprites() (image.Image, error) {
+	f, err := os.Open("sprites.png")
+	if err != nil {
+		return nil, err
+	}
 	defer f.Close()
 
 	img, _, err := image.Decode(f)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return img
+	return img, nil
 }

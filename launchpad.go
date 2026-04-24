@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"math/rand/v2"
+	"os"
 	"time"
 
 	"gitlab.com/gomidi/midi/v2"
@@ -34,7 +35,7 @@ type Event struct {
 	Velocity float64
 }
 
-func SetupLaunchpad(synth *Synth, demo bool, baseFreq float64, startDivs int) *Launchpad {
+func SetupLaunchpad(synth *Synth, demo bool, baseFreq float64, startDivs int) (*Launchpad, error) {
 	var err error
 
 	pad := Launchpad{
@@ -44,22 +45,22 @@ func SetupLaunchpad(synth *Synth, demo bool, baseFreq float64, startDivs int) *L
 
 	pad.InPort, err = midi.FindInPort("Launchpad X LPX MIDI Out")
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	pad.OutPort, err = midi.FindOutPort("Launchpad X LPX MIDI In")
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	pad.Send, err = midi.SendTo(pad.OutPort)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	pad.StopMidiCB, err = midi.ListenTo(pad.InPort, pad.OnMidiEvent)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	programmerMode := []byte{0x00, 0x20, 0x29, 0x02, 0x0C, 0x00, 0x7F}
@@ -75,7 +76,7 @@ func SetupLaunchpad(synth *Synth, demo bool, baseFreq float64, startDivs int) *L
 		pad.SetupTuning(startDivs)
 	}
 
-	return &pad
+	return &pad, nil
 }
 
 func (pad *Launchpad) OnMidiEvent(msg midi.Message, timestamp int32) {
@@ -105,9 +106,12 @@ func (pad *Launchpad) OnMidiEvent(msg midi.Message, timestamp int32) {
 			case 98:
 				pad.Exit = true
 			case 97:
-				pad.Synth.Shape++
-				pad.Synth.Shape %= NumShapes
-				fmt.Println("Synth switched to", ShapeNames[pad.Synth.Shape])
+				func() {
+					pad.Synth.Mutex.Lock()
+					defer pad.Synth.Mutex.Unlock()
+					pad.Synth.Shape = (pad.Synth.Shape + 1) % NumShapes
+					fmt.Println("Synth switched to", ShapeNames[pad.Synth.Shape])
+				}()
 			case 95:
 				if pad.Tuning.Divisions > 1 {
 					pad.SetupTuning(pad.Tuning.Divisions - 1)
@@ -226,7 +230,11 @@ func (pad *Launchpad) DrawAll(colors []color.Color) {
 }
 
 func (pad *Launchpad) DrawSprites() {
-	sprites := LoadSprites()
+	sprites, err := LoadSprites()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to load sprites: %v\n", err)
+		return
+	}
 
 	for !pad.Exit {
 
